@@ -5,6 +5,10 @@ import { ProductServiceStack } from '../lib/product-service-stack';
 
 const app = new cdk.App();
 new ProductServiceStack(app, 'ProductServiceStack', {
+  env: {
+    region: 'ap-south-1',
+    account: process.env.CDK_DEFAULT_ACCOUNT, // Default account from environment
+  },
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */

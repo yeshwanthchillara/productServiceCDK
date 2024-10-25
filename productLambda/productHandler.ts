@@ -59,6 +59,7 @@ interface Product {
     typeNewOrRefurbished: string;
     inventoryStock: number;
     sellerId: number;
+    images: Array<string>;
     sellerContact: string;
     createdAt: string;
     updatedAt: string;
@@ -69,70 +70,59 @@ const resolvers = {
     Mutation: {
         // Create a new product
         createProduct: async (_: any, args: any): Promise<Product> => {
-            const {
-                productName,
-                description,
-                discount,
-                manufacturer,
-                price,
-                productType,
-                techSpecifications,
-                typeNewOrRefurbished,
-                inventoryStock,
-                sellerId,
-                sellerContact,
-                images, // Assume this contains the uploaded files
-            } = args;
-            const currentTime = new Date().toISOString()
+            try {
+                const {
+                    productName,
+                    description,
+                    discount,
+                    manufacturer,
+                    price,
+                    productType,
+                    techSpecifications,
+                    typeNewOrRefurbished,
+                    inventoryStock,
+                    sellerId,
+                    sellerContact,
+                    images,
+                } = args;
 
-            // Prepare product data for DynamoDB
-            const newProduct: Product = {
-                id: uuidv4(),
-                productName,
-                description,
-                discount: parseInt(discount),
-                manufacturer,
-                price: parseFloat(price),
-                productType,
-                techSpecifications: JSON.parse(techSpecifications).map(
-                    (spec: { key: string; value: string }) => `${spec.key}:${spec.value}`
-                ).join(';'),
-                typeNewOrRefurbished,
-                inventoryStock: parseInt(inventoryStock),
-                sellerId: parseInt(sellerId),
-                sellerContact,
-                createdAt: currentTime,
-                updatedAt: currentTime,
-            };
+                const currentTime = new Date().toISOString()
 
-            const imageKeys = await imageUploader(images);
+                const imageKeys = await imageUploader(images);
 
-            // Insert the product into DynamoDB
-            const params = {
-                TableName: TABLE_NAME,
-                Item: newProduct,
-            };
+                // Prepare product data for DynamoDB
+                const newProduct: Product = {
+                    id: uuidv4(),
+                    productName,
+                    description,
+                    discount: parseInt(discount),
+                    manufacturer,
+                    price: parseFloat(price),
+                    productType,
+                    techSpecifications: JSON.parse(techSpecifications).map(
+                        (spec: { key: string; value: string }) => `${spec.key}:${spec.value}`
+                    ).join(';'),
+                    typeNewOrRefurbished,
+                    inventoryStock: parseInt(inventoryStock),
+                    sellerId: parseInt(sellerId),
+                    sellerContact,
+                    images: imageKeys as string[],
+                    createdAt: currentTime,
+                    updatedAt: currentTime,
+                };
 
-            // Images keys are limited to 2 Only
-            const imageDataParams = {
-                RequestItems: {
-                    [IMAGE_TABLE_NAME]: imageKeys.map(imagekey => ({
-                        PutRequest: {
-                            Item: {
-                                imageLocation: '', // Specify the image location if available
-                                imagekey,
-                                createdAt: currentTime,
-                                updatedAt: currentTime,
-                                productId: newProduct.id // The ID of the newly created product
-                            },
-                        },
-                    })),
-                },
-            };
+                // Insert the product into DynamoDB
+                const params = {
+                    TableName: TABLE_NAME,
+                    Item: newProduct,
+                };
 
-            await dynamoDb.put(params).promise();
-            await dynamoDb.batchWrite(imageDataParams).promise();
-            return newProduct;
+                await dynamoDb.put(params).promise();
+                return newProduct;
+            } catch (error) {
+                console.error("Error saving product or images:", error);
+                throw new Error("Could not create product");
+            }
         },
     },
 };
