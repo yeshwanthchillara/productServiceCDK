@@ -13,7 +13,7 @@ export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Dynamodb resource
+    // DynamoDB Table
     const productTable = new dynamodb.Table(this, 'ProductTable', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'createdAt', type: dynamodb.AttributeType.NUMBER },
@@ -22,7 +22,7 @@ export class ProductServiceStack extends cdk.Stack {
       readCapacity: 5,
       writeCapacity: 5,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES
+      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES,
     });
 
     // S3 Bucket
@@ -34,66 +34,79 @@ export class ProductServiceStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    // SQS resource
+    // SQS Queue
     const productMutationQueue = new sqs.Queue(this, 'ProductTableMutationQueue', {
       encryption: sqs.QueueEncryption.KMS_MANAGED,
-      removalPolicy: cdk.RemovalPolicy.DESTROY
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Create an EventBridge rule to match DynamoDB stream events
+    // EventBridge Rule for DynamoDB Stream Events
     const rule = new eventbridge.Rule(this, 'DynamoStreamToSqsRule', {
       eventPattern: {
         source: ['aws.dynamodb'],
         detailType: ['DynamoDB Stream Record'],
         detail: {
-          eventSourceARN: [productTable.tableStreamArn],
+          eventSourceARN: [productTable.tableStreamArn!],
         },
       },
     });
 
-    // Add SQS as the target for the EventBridge rule
+    // Add SQS as target for EventBridge rule
     rule.addTarget(new targets.SqsQueue(productMutationQueue));
 
-    // Lambda resource
+    // Lambda Function
     const productServiceLambda = new lambda.Function(this, 'ProductService', {
       runtime: lambda.Runtime.NODEJS_20_X,
       code: lambda.Code.fromAsset('productLambda'),
       handler: 'productLambda.productHandler.handler',
       environment: {
         TABLE_NAME: productTable.tableName,
-        S3_BUCKET_NAME: storageBucket.bucketName
+        S3_BUCKET_NAME: storageBucket.bucketName,
       },
     });
 
-    // Remove the Lambda log group with the stack
-    const logGroup = new logs.LogGroup(this, 'ProductServiceLogGroup', {
-      logGroupName: `/aws/lambda/${productServiceLambda.functionName}`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    // // CloudWatch Log Group for Lambda
+    // const lambdaLogGroup = new logs.LogGroup(this, 'ProductServiceLogGroup', {
+    //   logGroupName: `/aws/lambda/${productServiceLambda.functionName}`,
+    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
+    // });
+
+    // Create Log Group for API Gateway
+    // const apiGatewayLogGroup = new logs.LogGroup(this, 'ApiGatewayAccessLogs', {
+    //   logGroupName: `/aws/apigateway/${this.stackName}/access-logs`,
+    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
+    // });
+
+    // Create API Gateway
+    const api = new apigateway.LambdaRestApi(this, 'ProductServiceApi', {
+      handler: productServiceLambda,
+      proxy: false,
+      // deployOptions: {
+      //   loggingLevel: apigateway.MethodLoggingLevel.INFO,
+      //   dataTraceEnabled: true,
+      //   accessLogDestination: new apigateway.LogGroupLogDestination(apiGatewayLogGroup),
+      //   accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
+      // },
     });
+
+    // Define '/product' resource with methods
+    const productResource = api.root.addResource('product');
+
+    // Add methods to the resource
+    productResource.addMethod('GET');
+    productResource.addMethod('PUT');
+    productResource.addMethod('POST');
+    productResource.addMethod('DELETE');
 
     // Grant Lambda permissions to DynamoDB and S3
     productTable.grantReadWriteData(productServiceLambda);
     storageBucket.grantReadWrite(productServiceLambda);
+    // lambdaLogGroup.grantWrite(productServiceLambda);
 
-    // API Gateway resource
-    const api = new apigateway.LambdaRestApi(this, 'ProductServiceApi', {
-      handler: productServiceLambda,
-      proxy: false,
-      deployOptions: {
-        loggingLevel: apigateway.MethodLoggingLevel.INFO,
-      }
+    // Add an output for the API URL
+    new cdk.CfnOutput(this, 'ApiUrl', {
+      value: api.urlForPath('/'),
+      description: 'The URL of the Product Service API',
     });
-
-    const apiLogGroup = new logs.LogGroup(this, 'ApiGatewayAccessLogs', {
-      logGroupName: `/aws/apigateway/${api.restApiId}`,
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
-
-    // Define the '/product' resource with a GET/PUT/POST/DELETE method
-    const productResource = api.root.addResource('product');
-    productResource.addMethod('GET'); // Testing Purpose
-    productResource.addMethod('PUT');
-    productResource.addMethod('POST');
-    productResource.addMethod('DELETE');
   }
 }

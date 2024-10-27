@@ -2,11 +2,11 @@ import { ApolloServer, gql } from 'apollo-server-lambda';
 import * as AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 import { imageUploader } from './helpers/imageUploader';
+import { APIGatewayProxyHandler } from 'aws-lambda';
 
 // DynamoDB client
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const TABLE_NAME = process.env.TABLE_NAME!;
-const IMAGE_TABLE_NAME = process.env.IMAGE_TABLE_NAME!;
 
 // GraphQL Schema
 const typeDefs = gql`
@@ -133,4 +133,4 @@ const server = new ApolloServer({
     resolvers,
 });
 
-export const handler = server.createHandler();
+export const handler: APIGatewayProxyHandler= server.createHandler();
