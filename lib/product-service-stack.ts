@@ -7,7 +7,6 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as eventbridge from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as logs from 'aws-cdk-lib/aws-logs';
 
 export class ProductServiceStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -65,28 +64,20 @@ export class ProductServiceStack extends cdk.Stack {
       },
     });
 
-    // // CloudWatch Log Group for Lambda
-    // const lambdaLogGroup = new logs.LogGroup(this, 'ProductServiceLogGroup', {
-    //   logGroupName: `/aws/lambda/${productServiceLambda.functionName}`,
-    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
-    // });
-
-    // Create Log Group for API Gateway
-    // const apiGatewayLogGroup = new logs.LogGroup(this, 'ApiGatewayAccessLogs', {
-    //   logGroupName: `/aws/apigateway/${this.stackName}/access-logs`,
-    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
-    // });
-
     // Create API Gateway
     const api = new apigateway.LambdaRestApi(this, 'ProductServiceApi', {
       handler: productServiceLambda,
       proxy: false,
-      // deployOptions: {
-      //   loggingLevel: apigateway.MethodLoggingLevel.INFO,
-      //   dataTraceEnabled: true,
-      //   accessLogDestination: new apigateway.LogGroupLogDestination(apiGatewayLogGroup),
-      //   accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
-      // },
+      deployOptions: {
+        stageName: 'dev',
+      },
+      defaultMethodOptions: {
+        apiKeyRequired: false,
+      },
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      }
     });
 
     // Define '/product' resource with methods
@@ -101,7 +92,6 @@ export class ProductServiceStack extends cdk.Stack {
     // Grant Lambda permissions to DynamoDB and S3
     productTable.grantReadWriteData(productServiceLambda);
     storageBucket.grantReadWrite(productServiceLambda);
-    // lambdaLogGroup.grantWrite(productServiceLambda);
 
     // Add an output for the API URL
     new cdk.CfnOutput(this, 'ApiUrl', {
