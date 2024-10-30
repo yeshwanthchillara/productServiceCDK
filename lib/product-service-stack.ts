@@ -25,9 +25,8 @@ export class ProductServiceStack extends cdk.Stack {
     });
 
     // S3 Bucket
-    const storageBucket = new s3.Bucket(this, 'PlacartStorageBucket', {
-      bucketName: 'placart-storage-bucket',
-      versioned: true,
+    const storageBucket = new s3.Bucket(this, 'PlacartAssetStorage', {
+      bucketName: 'placart-asset-storage',
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       publicReadAccess: false,
       autoDeleteObjects: true,
@@ -45,7 +44,7 @@ export class ProductServiceStack extends cdk.Stack {
         source: ['aws.dynamodb'],
         detailType: ['DynamoDB Stream Record'],
         detail: {
-          eventSourceARN: [productTable.tableStreamArn!],
+          eventSourceARN: [productTable.tableStreamArn],
         },
       },
     });
