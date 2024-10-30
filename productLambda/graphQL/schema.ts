@@ -15,9 +15,16 @@ export const typeDefs = gql`
     inventoryStock: Int!
     sellerId: Int!
     sellerContact: String!
-    images: [String!]!
     createdAt: String!
     updatedAt: String!
+  }
+
+  type SampleData {
+    name: String!
+  }
+  
+  type Query {
+    getProducts: SampleData
   }
 
   type Mutation {
@@ -32,8 +39,7 @@ export const typeDefs = gql`
       typeNewOrRefurbished: String!,
       inventoryStock: Int!,
       sellerId: Int!,
-      sellerContact: String!,
-      images: [Upload!]!
+      sellerContact: String!
     ): Product!
   }
 `;

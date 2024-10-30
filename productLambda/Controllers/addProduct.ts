@@ -21,12 +21,11 @@ export const addProduct = async (args: any) => {
             inventoryStock,
             sellerId,
             sellerContact,
-            images,
         } = args;
 
-        const currentTime = new Date().toISOString()
+        const currentTime = Date.now();
 
-        const imageKeys = await imageUploader(images);
+        // const imageKeys = await imageUploader(images);
 
         // Prepare product data for DynamoDB
         const newProduct: Product = {
@@ -37,14 +36,12 @@ export const addProduct = async (args: any) => {
             manufacturer,
             price: parseFloat(price),
             productType,
-            techSpecifications: JSON.parse(techSpecifications).map(
-                (spec: { key: string; value: string }) => `${spec.key}:${spec.value}`
-            ).join(';'),
+            techSpecifications: JSON.parse(techSpecifications),
             typeNewOrRefurbished,
             inventoryStock: parseInt(inventoryStock),
             sellerId: parseInt(sellerId),
             sellerContact,
-            images: imageKeys as string[],
+            // images: imageKeys as string[],
             createdAt: currentTime,
             updatedAt: currentTime,
         };

@@ -6,12 +6,20 @@ export interface Product {
     manufacturer: string;
     price: number;
     productType: string;
-    techSpecifications: string;
+    techSpecifications: technicalSpecifications;
     typeNewOrRefurbished: string;
     inventoryStock: number;
     sellerId: number;
-    images: Array<string>;
+    // images: Array<string>;
     sellerContact: string;
-    createdAt: string;
-    updatedAt: string;
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface technicalSpecifications {
+    [key: string]: string | number | boolean;
+}
+
+export interface sampleData {
+    name: string;
 }

@@ -56,7 +56,7 @@ export class ProductServiceStack extends cdk.Stack {
     const productServiceLambda = new lambda.Function(this, 'ProductService', {
       runtime: lambda.Runtime.NODEJS_20_X,
       code: lambda.Code.fromAsset('productLambda'),
-      handler: 'productLambda.productHandler.handler',
+      handler: 'productHandler.handler',
       environment: {
         TABLE_NAME: productTable.tableName,
         S3_BUCKET_NAME: storageBucket.bucketName,
